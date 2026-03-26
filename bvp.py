@@ -57,7 +57,7 @@ def gauss_seidel_2D(A, J, omega, max_steps, tolerance):
                     A[i+1,j] + A[i-1,j] +
                     A[i,j+1] + A[i,j-1] +
                     J[i,j]
-                ) / 6.0
+                ) / 4.0
 
                 # Successive Over-Relaxation (SOR)
                 A[i,j] = (1 - omega) * A_old[i,j] + omega * new_val
@@ -66,7 +66,7 @@ def gauss_seidel_2D(A, J, omega, max_steps, tolerance):
             print(f"Converged in {n} steps")
             break
     
-    return A
+    return A, n
 
 
 
@@ -247,8 +247,8 @@ class MagneticSolver():
         return self.Az
 
     def solve_gauss_seidel(self):
-        self.Az = gauss_seidel_2D(self.Az, self.Jz, self.omega, self.max_steps, self.tolerance)
-        return self.Az
+        self.Az, n = gauss_seidel_2D(self.Az, self.Jz, self.omega, self.max_steps, self.tolerance)
+        return self.Az, n
 
     def magnetic_field(self):
         Bx = np.zeros_like(self.Az)
