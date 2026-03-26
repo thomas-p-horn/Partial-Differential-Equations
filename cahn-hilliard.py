@@ -62,7 +62,7 @@ class cahn_hilliard:
 
 
     def plot_free_energy(self):
-        df = pd.read_csv(f'Free Energy {self.phi0}.csv')
+        df = pd.read_csv(f'cahn-hilliard data/Free Energy {self.phi0}.csv')
         t_vals = df['Time']
         F = df['Free Energy']
 
@@ -70,7 +70,7 @@ class cahn_hilliard:
         plt.title(rf'$F(t) ~ ~ ~\phi_0 = {self.phi0}$')
         plt.xlabel('Time step')
         plt.ylabel('Total Free Energy')
-        plt.savefig(f'Free Energy {self.phi0}.png', dpi=300, bbox_inches='tight')
+        plt.savefig(f'cahn-hilliard data/Free Energy {self.phi0}.png', dpi=300, bbox_inches='tight')
 
 
     def record_free_energy(self):
@@ -96,7 +96,7 @@ class cahn_hilliard:
             "Free Energy": F
         })
 
-        df.to_csv(f'Free Energy {self.phi0}.csv')
+        df.to_csv(f'cahn-hilliard data/Free Energy {self.phi0}.csv')
 
 
 if __name__ == "__main__":

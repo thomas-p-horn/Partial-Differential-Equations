@@ -121,7 +121,7 @@ class PoissonSolver:
         plt.ylabel(r"y")
         plt.imshow(self.phi[:,:,mid], origin='lower', cmap='hot')
         plt.colorbar()
-        plt.savefig("Electrostatic Potential.png", dpi=300, bbox_inches='tight')
+        plt.savefig("bvp data/Electrostatic Potential.png", dpi=300, bbox_inches='tight')
         plt.close()
 
     def plot_field(self):
@@ -131,7 +131,7 @@ class PoissonSolver:
         plt.figure()
         plt.title("Electric Field (midplane)")
         plt.quiver(Ex[:,:,mid], Ey[:,:,mid])
-        plt.savefig("Electric Field.png", dpi=300, bbox_inches='tight')
+        plt.savefig("bvp data/Electric Field.png", dpi=300, bbox_inches='tight')
         plt.close()
 
 
@@ -196,8 +196,10 @@ class MagneticSolver():
         plt.ylabel(r"y")
         plt.imshow(self.Az[:,:], origin='lower', cmap='hot')
         plt.colorbar()
-        plt.savefig("Magnetic Potential.png", dpi=300, bbox_inches='tight')
+        plt.savefig("bvp data/Magnetic Potential.png", dpi=300, bbox_inches='tight')
         plt.close()
+
+
 
     def plot_field(self):
         Bx, By = self.magnetic_field()
@@ -207,7 +209,7 @@ class MagneticSolver():
         plt.xlabel(r"x")
         plt.ylabel(r"y")
         plt.quiver(Bx[:,:], By[:,:])
-        plt.savefig("Magnetic Field.png", dpi=300, bbox_inches='tight')
+        plt.savefig("bvp data/Magnetic Field.png", dpi=300, bbox_inches='tight')
         plt.close()
 
 
