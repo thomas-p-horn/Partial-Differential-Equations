@@ -21,13 +21,15 @@ def grad_2(lattice):
 
 
 class cahn_hilliard:
-    def __init__(self, L, a, k, M, dt, dx, phi0, sig_phi0):
+    def __init__(self, L, a, k, M, dt, dx, phi0, sig_phi0, tolerance):
         self.L = L
         self.a = a
         self.k = k
         self.M = M
         self.dt = dt
         self.dx = dx
+        self.phi0 = phi0
+        self.tolerance = tolerance
         
         self.phi = np.random.normal(phi0, sig_phi0, (L, L))
 
@@ -60,14 +62,15 @@ class cahn_hilliard:
 
 
     def plot_free_energy(self):
-        df = pd.read_csv('Free Energy.csv')
+        df = pd.read_csv(f'Free Energy {self.phi0}.csv')
         t_vals = df['Time']
         F = df['Free Energy']
 
         plt.plot(t_vals, F, c='darkslateblue')
+        plt.title(rf'$F(t) ~ ~ ~\phi_0 = {self.phi0}$')
         plt.xlabel('Time step')
         plt.ylabel('Total Free Energy')
-        plt.savefig('Free Energy.png', dpi=300, bbox_inches='tight')
+        plt.savefig(f'Free Energy {self.phi0}.png', dpi=300, bbox_inches='tight')
 
 
     def record_free_energy(self):
@@ -84,7 +87,7 @@ class cahn_hilliard:
             if (t % 500) == 0:
                 std = np.std(F[-500:])
                 print(std)
-                if std <= 0.1:
+                if std <= self.tolerance:
                     print(f'The total free energy converged for t={t}')
                     break
 
@@ -93,7 +96,7 @@ class cahn_hilliard:
             "Free Energy": F
         })
 
-        df.to_csv('Free Energy.csv')
+        df.to_csv(f'Free Energy {self.phi0}.csv')
 
 
 if __name__ == "__main__":
@@ -108,6 +111,7 @@ if __name__ == "__main__":
     parser.add_argument("-dx", help="Default=1.0", type=float, default=1.)
     parser.add_argument("-p0", "--phi0", help="Mean value of initialisation. Default=0.0", type=float, default=0.)
     parser.add_argument("-sp0", "--sigma_phi0", help="Distribution width of initialisation. Default=0.5", type=float, default=0.5)
+    parser.add_argument("-t", "--tolerance", help="Standard deviation of 500 iterations of the system below which the free energy is found to have converged. Default=0.1", type=float, default=0.5)
 
     args = parser.parse_args()
     action = args.action
@@ -120,7 +124,8 @@ if __name__ == "__main__":
         args.dt,
         args.dx,
         args.phi0,
-        args.sigma_phi0
+        args.sigma_phi0,
+        args.tolerance
     )
 
 
