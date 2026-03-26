@@ -3,6 +3,22 @@ import matplotlib.pyplot as plt
 from numba import njit
 import argparse
 import time
+from scipy.optimize import curve_fit
+
+def double_exp(x, a, b, mid):
+    y = np.zeros_like(x)
+    lower = (x <= mid)
+    upper = (x > mid)
+    y[lower] = a * np.exp(b * (x[lower] - mid))
+    y[upper] = a * np.exp(-b * (x[upper] - mid))
+    return y
+
+def inv_x(x, a, mid):
+    return a / np.abs(x - mid)
+
+def inv_x2(x, a, mid):
+    return a / np.abs(x - mid)**2
+
 
 @njit
 def gauss_seidel_3D(phi, rho, omega, max_steps, tolerance):
@@ -115,6 +131,8 @@ class PoissonSolver:
     def plot_midplane(self):
         mid = self.L // 2
 
+        np.savetxt('bvp data/Electrostatic Potential.csv', self.phi[:, :, mid])
+
         plt.figure()
         plt.title(r"Electrostatic Potential $\phi$ (midplane slice)")
         plt.xlabel(r"x")
@@ -124,14 +142,68 @@ class PoissonSolver:
         plt.savefig("bvp data/Electrostatic Potential.png", dpi=300, bbox_inches='tight')
         plt.close()
 
+
+        x = np.arange(len(self.phi[:, mid, mid]), dtype=np.float64)
+        y_data = self.phi[:, mid, mid]
+        mask = np.arange(len(x)) != mid
+        popt, _ = curve_fit(inv_x, x[mask], y_data[mask], p0=[1., float(mid)])
+
+        x_plot = x[mask]
+        y_plot = inv_x(x_plot, *popt)
+
+        plt.figure()
+        plt.title(r"Electrostatic Potential $\phi$ (x direction)")
+        plt.xlabel(r"x")
+        plt.ylabel(r"$\phi$")
+        plt.plot(x, self.phi[:, mid, mid], label='Data', c='darkslateblue')
+        plt.plot(x_plot, y_plot, label='1/r Fit', c='red')
+        plt.legend()
+        plt.savefig('bvp data/Electrostatic Potential 1D.png', dpi=300, bbox_inches='tight')
+        plt.close()
+
+
+
     def plot_field(self):
         Ex, Ey, _ = self.electric_field()
         mid = self.L // 2
+
+        ix, iy = np.meshgrid(np.arange(self.L), np.arange(self.L), indexing='ij')
+        
+        data = np.column_stack([
+            ix.ravel(), iy.ravel(),
+            self.phi[:, :, mid].ravel(),
+            Ex[:, :, mid].ravel(),
+            Ey[:, :, mid].ravel()
+        ])
+        
+        np.savetxt('bvp data/Electric Field.csv', data, delimiter=',',
+                header='x,y,phi,Ex,Ey', comments='')
 
         plt.figure()
         plt.title("Electric Field (midplane)")
         plt.quiver(Ex[:,:,mid], Ey[:,:,mid])
         plt.savefig("bvp data/Electric Field.png", dpi=300, bbox_inches='tight')
+        plt.close()
+
+
+        E_mag = np.sqrt(Ex[:, :, mid]**2 + Ey[:, :, mid]**2)
+
+        x = np.arange(len(E_mag[:, mid]), dtype=np.float64)
+        y_data = E_mag[:, mid]
+        mask = np.arange(len(x)) != mid
+        popt, _ = curve_fit(inv_x2, x[mask], y_data[mask], p0=[1., float(mid)])
+
+        x_plot = x[mask]
+        y_plot = inv_x2(x_plot, *popt)
+
+        plt.figure()
+        plt.title(r"Electric Field Strength $|E|$ (x direction)")
+        plt.xlabel(r"x")
+        plt.ylabel(r"$|E|$")
+        plt.plot(x, y_data, label='Data', c='darkslateblue')
+        plt.plot(x_plot, y_plot, label=f'1/x$^2$ Fit', c='red')
+        plt.legend()
+        plt.savefig('bvp data/Electric Field 1D.png', dpi=300, bbox_inches='tight')
         plt.close()
 
 
@@ -183,12 +255,15 @@ class MagneticSolver():
         By = np.zeros_like(self.Az)
 
         # Curl (All of A is in A_z, other cross term derivatives vanish)
-        Bx[1:-1, :] = (self.Az[2:, :] - self.Az[:-2, :]) / 2   # ∂Az/∂y
+        Bx[1:-1, :] = (self.Az[2:, :] - self.Az[:-2, :]) / 2
         By[:, 1:-1] = -(self.Az[:, 2:] - self.Az[:, :-2]) / 2
 
         return Bx, By
 
     def plot_midplane(self):
+        mid = self.L // 2
+
+        np.savetxt('bvp data/Magnetic Potential.csv', self.Az[:, :])
 
         plt.figure()
         plt.title(r"Magnetic Potential $A_z$ (midplane slice)")
@@ -199,10 +274,40 @@ class MagneticSolver():
         plt.savefig("bvp data/Magnetic Potential.png", dpi=300, bbox_inches='tight')
         plt.close()
 
+        x = np.arange(len(self.Az[:, mid]), dtype=np.float64)
+        y_data = self.Az[:, mid]
+        mask = np.arange(len(x)) != mid
+        popt, _ = curve_fit(double_exp, x[mask], y_data[mask], p0=[1., 1., float(mid)])
+
+        x_plot = x[mask]
+        y_plot = double_exp(x_plot, *popt)
+
+        plt.figure()
+        plt.title(r"Magnetic Potential $A_z$ (x direction)")
+        plt.xlabel(r"x")
+        plt.ylabel(r"$A_z$")
+        plt.plot(x, y_data, label='Data', c='darkslateblue')
+        plt.plot(x_plot, y_plot, label='exp(-r) Fit', c='red')
+        plt.legend()
+        plt.savefig('bvp data/Magnetic Potential 1D.png', dpi=300, bbox_inches='tight')
+        plt.close()
+
 
 
     def plot_field(self):
         Bx, By = self.magnetic_field()
+
+        ix, iy = np.meshgrid(np.arange(self.L), np.arange(self.L), indexing='ij')
+        
+        data = np.column_stack([
+            ix.ravel(), iy.ravel(),
+            self.Az[:, :].ravel(),
+            Bx[:, :].ravel(),
+            By[:, :].ravel()
+        ])
+        
+        np.savetxt('bvp data/Magnetic Field.csv', data, delimiter=',',
+                header='x,y,phi,Bx,By', comments='')
 
         plt.figure()
         plt.title(r"Magnetic Field $B$ (midplane)")
@@ -210,6 +315,29 @@ class MagneticSolver():
         plt.ylabel(r"y")
         plt.quiver(Bx[:,:], By[:,:])
         plt.savefig("bvp data/Magnetic Field.png", dpi=300, bbox_inches='tight')
+        plt.close()
+
+
+        mid = self.L // 2
+
+        B_mag = np.sqrt(Bx[:, :]**2 + By[:, :]**2)
+
+        x = np.arange(len(B_mag[:, mid]), dtype=np.float64)
+        y_data = B_mag[:, mid]
+        mask = np.arange(len(x)) != mid
+        popt, _ = curve_fit(inv_x, x[mask], y_data[mask], p0=[1., float(mid)])
+
+        x_plot = x[mask]
+        y_plot = inv_x(x_plot, *popt)
+
+        plt.figure()
+        plt.title(r"Magnetic Field Strength $|B|$ (x direction)")
+        plt.xlabel(r"x")
+        plt.ylabel(r"$|B|$")
+        plt.plot(x, y_data, label='Data', c='darkslateblue')
+        plt.plot(x_plot, y_plot, label=f'1/x Fit', c='red')
+        plt.legend()
+        plt.savefig('bvp data/Magnetic Field 1D.png', dpi=300, bbox_inches='tight')
         plt.close()
 
 
