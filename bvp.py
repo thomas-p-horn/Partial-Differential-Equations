@@ -36,14 +36,14 @@ def gauss_seidel_3D(phi, rho, omega, max_steps, tolerance):
                         rho[i,j,k]
                     ) / 6.0
 
-                    # Successive Over-Relaxation (SOR)
+                    # Over relaxation
                     phi[i,j,k] = (1 - omega) * phi_old[i,j,k] + omega * new_val
 
         if np.max(np.abs(phi - phi_old)) <= tolerance:
             print(f"Converged in {n} steps")
             break
     
-    return phi
+    return phi, n
 
 @njit
 def gauss_seidel_2D(A, J, omega, max_steps, tolerance):
@@ -113,8 +113,8 @@ class PoissonSolver:
         return self.phi
 
     def solve_gauss_seidel(self):
-        self.phi = gauss_seidel_3D(self.phi, self.rho, self.omega, self.max_steps, self.tolerance)
-        return self.phi
+        self.phi, n = gauss_seidel_3D(self.phi, self.rho, self.omega, self.max_steps, self.tolerance)
+        return self.phi, n
     
     def electric_field(self):
         Ex = np.zeros_like(self.phi)
@@ -344,7 +344,7 @@ class MagneticSolver():
 if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description="Runs a solver for the Poisson equation or for the magnetic field equation")
-    parser.add_argument("-p", "--problem", help="Which problem to solve. 'electrostatic' or 'magnetic'. Default='electrostatic'.", type=str, default='electrostatic')
+    parser.add_argument("-p", "--problem", help="Which problem to solve. 'electrostatic' or 'magnetic' or 'SOR'. Default='electrostatic'.", type=str, default='electrostatic')
     parser.add_argument("-a", "--algorithm", help="Algorithm used to solve problem. 'jacobi' or 'gauss-seidel'. Default='jacobi'.", type=str, default='jacobi')
     parser.add_argument("-l", "--length", help="LxLxL size of lattice. Default=100.", type=int, default=100)
     parser.add_argument("-t", "--tolerance", help="Tolerance requirement to terminate solver. (Solver runs until highest value for difference between each step is below tolerance.) Default=1e-5.", type=float, default=1e-5)
@@ -374,8 +374,27 @@ if __name__ == "__main__":
             max_steps,
             omega
         )
+    elif problem.lower() == 'sor':
+        n_list = []
+        omega_list = np.linspace(1, 1.99, 50)
+        for omega in omega_list:
+            solver = PoissonSolver(
+                L,
+                tolerance,
+                max_steps,
+                omega
+            )
+            _, n = solver.solve_gauss_seidel()
+            n_list.append(n)
+
+        plt.plot(omega_list, n_list, c='darkslateblue')
+        plt.xlabel(r'$\omega$')
+        plt.ylabel('Number of steps to solve')
+        plt.savefig('bvp data/Omega.png', dpi=300, bbox_inches='tight')
+        quit()
+
     else:
-        raise ValueError("Problem not recognised. Please input 'poisson' or 'magnetic'.")
+        raise ValueError("Problem not recognised. Please input 'poisson' or 'magnetic' or 'sor'.")
 
     t1 = time.time()
     if algorithm.lower() == 'jacobi':

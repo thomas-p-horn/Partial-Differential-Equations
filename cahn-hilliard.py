@@ -64,12 +64,12 @@ class cahn_hilliard:
     def plot_free_energy(self):
         df = pd.read_csv(f'cahn-hilliard data/Free Energy {self.phi0}.csv')
         t_vals = df['Time']
-        F = df['Free Energy']
+        F = df['Mean Free Energy']
 
         plt.plot(t_vals, F, c='darkslateblue')
         plt.title(rf'$F(t) ~ ~ ~\phi_0 = {self.phi0}$')
-        plt.xlabel('Time step')
-        plt.ylabel('Total Free Energy')
+        plt.xlabel('Time Step')
+        plt.ylabel('Mean Free Energy')
         plt.savefig(f'cahn-hilliard data/Free Energy {self.phi0}.png', dpi=300, bbox_inches='tight')
 
 
@@ -87,13 +87,13 @@ class cahn_hilliard:
             if (t % 500) == 0:
                 std = np.std(F[-500:])
                 print(std)
-                if std <= self.tolerance:
+                if std <= self.tolerance and t > 5000:
                     print(f'The total free energy converged for t={t}')
                     break
 
         df = pd.DataFrame({
             "Time": t_vals,
-            "Free Energy": F
+            "Mean Free Energy": np.array(F) / (self.L**2)
         })
 
         df.to_csv(f'cahn-hilliard data/Free Energy {self.phi0}.csv')
@@ -104,14 +104,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Runs the Cahn-Hilliard equation, modelling phase separation.")
     parser.add_argument("--action", help="What to do with model: 'animate' or 'measure' (calculate free energy) or 'draw' (plot free energy, requires .csv files from 'measure'). Default='animate'", type=str, default='animate')
     parser.add_argument("-l", "--length", help="LxL size of lattice. Default=100", type=int, default=100)
-    parser.add_argument("-a", help="Default=2.0", type=float, default=2.)
+    parser.add_argument("-a", help="Default=1.0", type=float, default=1.)
     parser.add_argument("-k", help="Default=1.0", type=float, default=1.)
-    parser.add_argument("-M", help="Default=2.0", type=float, default=2.)
+    parser.add_argument("-M", help="Default=1.0", type=float, default=1.)
     parser.add_argument("-dt", help="Default=2e-4", type=float, default=2e-4)
     parser.add_argument("-dx", help="Default=1.0", type=float, default=1.)
     parser.add_argument("-p0", "--phi0", help="Mean value of initialisation. Default=0.0", type=float, default=0.)
-    parser.add_argument("-sp0", "--sigma_phi0", help="Distribution width of initialisation. Default=0.5", type=float, default=0.5)
-    parser.add_argument("-t", "--tolerance", help="Standard deviation of 500 iterations of the system below which the free energy is found to have converged. Default=0.1", type=float, default=0.5)
+    parser.add_argument("-sp0", "--sigma_phi0", help="Distribution width of initialisation. Default=0.05", type=float, default=0.1)
+    parser.add_argument("-t", "--tolerance", help="Standard deviation of 500 iterations of the system below which the free energy is found to have converged. Default=0.1", type=float, default=0.005)
 
     args = parser.parse_args()
     action = args.action
